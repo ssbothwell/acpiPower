@@ -1,4 +1,3 @@
-{-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE TypeApplications #-}
 module Main where
 
@@ -129,40 +128,3 @@ main = do
     bat1 <- getAcpiBat BAT1
     print bat0
     printStatus ac bat0 bat1
-
-
-
-data CracklePop = N Int | Crackle | Pop | CracklePop deriving Show
-
-cracklepop :: [Int] -> [CracklePop]
-cracklepop = fmap f
-    where f :: Int -> CracklePop
-          f x
-            | x `mod` 3 == 0 && x `mod` 5 == 0 = CracklePop
-            | x `mod` 3 == 0 = Crackle
-            | x `mod` 5 == 0 = Pop
-            | otherwise = N x
-
-main' :: IO ()
-main' = do
-    let xs = cracklepop [1..100]
-    mapM_ (\case
-            (N i) -> print i
-            x     -> print x) xs
-
-crackle :: [String]
-crackle = cycle $ replicate 2 [] ++ pure "Crackle"
-
-pop :: [String]
-pop = cycle $ replicate 4 [] ++ pure "Pop"
-
-cracklepop' :: [String]
-cracklepop' = zipWith3 f [1..100] crackle pop
-    where f :: Int -> String -> String -> String
-          f i ("") ("") = show i
-          f _ ("") b = b
-          f _ a ("") = a
-          f _ a b    = a ++ b
-
-main'' :: IO ()
-main'' = mapM_ putStrLn cracklepop'
