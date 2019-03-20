@@ -27,7 +27,7 @@ newtype EnergyPercent = EnergyPercent { getEnergyPercent :: Rational }
 
 -- | Power Sources
 data AcStatus = Connected | Disconnected deriving Eq
-data BatteryStatus = BatteryStatus EnergyPercent ChargeStatus TimeRemaining
+data BatteryStatus = BatteryStatus Battery EnergyPercent ChargeStatus TimeRemaining
 
 
 ---------------------
@@ -53,17 +53,17 @@ instance Show TimeRemaining where
     show = formatRemainingTime . getTime
 
 instance Show AcStatus where
-    show Disconnected = ""
-    show Connected  = pure $ fontAwesomeChar FaPlug
+    show Disconnected = "AC"
+    show Connected  = pure (fontAwesomeChar FaPlug) ++ " AC"
 
 instance Show BatteryStatus where
-    show (BatteryStatus energy status timeRemaining) =
-        let chargingIcon   = pure $ fontAwesomeChar FaBolt
+    show (BatteryStatus bat energy status timeRemaining) =
+        let chargingIcon = pure $ fontAwesomeChar FaBolt
         in if status == Charging
-           then show energy ++ " " ++ chargingIcon
+           then show bat ++ " " ++ show energy ++ " " ++ chargingIcon
            else if status == Discharging
-                then show energy ++ " " ++ show timeRemaining
-                else show energy
+                then show bat ++ " " ++ show energy ++ " " ++ show timeRemaining
+                else show bat ++ " " ++ show energy
 
 
 --------------
@@ -100,7 +100,7 @@ getAcpiBat bat = do
                       . (* 3600)
                       $ (getEnergyFull energyFull - getEnergyNow energyNow) `div` getPowerNow power
 
-    return $ BatteryStatus energyPercent status timeRemaining
+    return $ BatteryStatus bat energyPercent status timeRemaining
 
 toStatus :: String -> ChargeStatus
 toStatus str =
@@ -116,7 +116,7 @@ calcPercent :: EnergyPercent -> Integer
 calcPercent = round @Double . (* 100) . realToFrac . getEnergyPercent
 
 printStatus :: AcStatus -> BatteryStatus -> BatteryStatus -> IO ()
-printStatus ac bat0@(BatteryStatus _ chargeStatus _) bat1@(BatteryStatus _ chargeStatus' _)
+printStatus ac bat0@(BatteryStatus _ _ chargeStatus _) bat1@(BatteryStatus _ _ chargeStatus' _)
     | chargeStatus  /= Full = print bat0
     | chargeStatus' /= Full = print bat1
     | otherwise             = print ac
@@ -126,5 +126,4 @@ main = do
     ac   <- getAcpiAc
     bat0 <- getAcpiBat BAT0
     bat1 <- getAcpiBat BAT1
-    print bat0
     printStatus ac bat0 bat1
