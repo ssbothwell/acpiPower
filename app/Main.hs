@@ -53,17 +53,21 @@ instance Show TimeRemaining where
     show = formatRemainingTime . getTime
 
 instance Show AcStatus where
-    show Disconnected = "AC"
-    show Connected  = pure (fontAwesomeChar FaPlug) ++ " AC"
+    showsPrec _ Disconnected = showString "AC"
+    showsPrec _ Connected    = showString (pure $ fontAwesomeChar FaPlug) .  showString " AC"
 
 instance Show BatteryStatus where
-    show (BatteryStatus bat energy status timeRemaining) =
-        let chargingIcon = pure $ fontAwesomeChar FaBolt
+    showsPrec _ (BatteryStatus bat energy status timeRemaining) =
+        let chargingIcon   = showString . pure $ fontAwesomeChar FaBolt
+            bat'           = showString        $ show bat
+            energy'        = showString        $ show energy
+            timeRemaining' = showString        $ show timeRemaining
+            space          = showString          " "
         in if status == Charging
-           then show bat ++ " " ++ show energy ++ " " ++ chargingIcon
+           then bat' . space . energy' . space . chargingIcon
            else if status == Discharging
-                then show bat ++ " " ++ show energy ++ " " ++ show timeRemaining
-                else show bat ++ " " ++ show energy
+                then bat' . space . showString (show energy) . space . timeRemaining'
+                else bat' . space . showString (show energy)
 
 
 --------------
