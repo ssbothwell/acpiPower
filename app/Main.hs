@@ -16,10 +16,11 @@ data Battery = BAT0 | BAT1 deriving Show
 data Attr = EnergyNowAttr | EnergyFullAttr | StatusAttr | PowerNowAttr
 
 -- | ACPI Battery Properties
-newtype EnergyNow  = EnergyNow  { getEnergyNow :: Integer }
-newtype EnergyFull = EnergyFull { getEnergyFull :: Integer }
-newtype PowerNow   = PowerNow   { getPowerNow :: Integer }
-data ChargeStatus  = Charging | Discharging | Full deriving Eq
+newtype EnergyNow       = EnergyNow       { getEnergyNow       :: Integer }
+newtype EnergyFull      = EnergyFull      { getEnergyFull      :: Integer }
+newtype EnergyRemaining = EnergyRemaining { getEnergyRemaining :: Integer }
+newtype PowerNow        = PowerNow        { getPowerNow        :: Integer }
+data ChargeStatus       = Charging | Discharging | Full deriving Eq
 
 -- | Derived Battery Properties
 newtype TimeRemaining = TimeRemaining { getTime :: DiffTime }
@@ -96,11 +97,9 @@ getAcpiBat bat = do
     energyFull <- EnergyFull . read       . trim <$> readFile (sysFsPath ++ show EnergyFullAttr)
     status     <- toChargeStatus          . trim <$> readFile (sysFsPath ++ show StatusAttr)
     power      <- PowerNow   . read       . trim <$> readFile (sysFsPath ++ show PowerNowAttr)
-    let energyPercent = toEnergyPercent energyNow energyFull
-    let timeRemaining = TimeRemaining
-                      . secondsToDiffTime
-                      . (* 3600)
-                      $ (getEnergyFull energyFull - getEnergyNow energyNow) `div` getPowerNow power
+    let energyPercent   = toEnergyPercent energyNow energyFull
+    let energyRemaining = toEnergyRemaining energyNow energyFull
+    let timeRemaining   = toTimeRemaining energyNow energyRemaining power
 
     return $ BatteryStatus bat energyPercent status timeRemaining
 
@@ -110,6 +109,16 @@ toChargeStatus str =
       "Charging"    -> Charging
       "Discharging" -> Discharging
       _             -> Full
+
+toEnergyRemaining :: EnergyNow -> EnergyFull -> EnergyRemaining
+toEnergyRemaining (EnergyNow now) (EnergyFull full) = EnergyRemaining $ full - now
+
+toTimeRemaining :: EnergyNow -> EnergyRemaining -> PowerNow -> TimeRemaining
+toTimeRemaining now remain pow =
+    let now' = fromInteger . getEnergyNow       $ now
+        rem' = fromInteger . getEnergyRemaining $ remain
+        pow' = fromInteger . getPowerNow        $ pow
+    in TimeRemaining . secondsToDiffTime . round @Double . (* 3600) $ (now' - rem') / pow'
 
 toEnergyPercent :: EnergyNow -> EnergyFull -> EnergyPercent
 toEnergyPercent (EnergyNow now) (EnergyFull full) = EnergyPercent $ now % full
