@@ -35,26 +35,24 @@ data BatteryStatus = BatteryStatus Battery EnergyPercent ChargeStatus TimeRemain
 ---------------------
 
 instance Show Attr where
-    show EnergyNowAttr  = "energy_now"
-    show EnergyFullAttr = "energy_full"
-    show StatusAttr     = "status"
-    show PowerNowAttr   = "power_now"
+    showsPrec _ EnergyNowAttr  = showString "energy_now"
+    showsPrec _ EnergyFullAttr = showString "energy_full"
+    showsPrec _ StatusAttr     = showString "status"
+    showsPrec _ PowerNowAttr   = showString "power_now"
 
 instance Show EnergyPercent where
-    show  energy@(EnergyPercent rat)
-        | rat <= 1 % 8 = pure (fontAwesomeChar FaBatteryEmpty) ++ percent
-        | rat <= 1 % 4 = pure (fontAwesomeChar FaBatteryQuarter) ++ percent
-        | rat <= 1 % 2 = pure (fontAwesomeChar FaBatteryHalf) ++ percent
-        | rat <= 3 % 4 = pure (fontAwesomeChar FaBatteryThreeQuarters) ++ percent
-        | otherwise    = pure (fontAwesomeChar FaBatteryFull) ++ percent
-        where percent = " " ++ show (calcPercent energy) ++ "%"
+    showsPrec _ energy =
+        let icon    = showString . pure . fontAwesomeChar . iconForBattery $ energy
+            percent = showString (show $ fromEnergyPercent energy) . showString "%"
+            space   = showString " "
+        in icon . space . percent
 
 instance Show TimeRemaining where
     show = formatRemainingTime . getTime
 
 instance Show AcStatus where
     showsPrec _ Disconnected = showString "AC"
-    showsPrec _ Connected    = showString (pure $ fontAwesomeChar FaPlug) .  showString " AC"
+    showsPrec _ Connected    = showString (pure $ fontAwesomeChar FaPlug) . showString " AC"
 
 instance Show BatteryStatus where
     showsPrec _ (BatteryStatus bat energy status timeRemaining) =
@@ -96,9 +94,9 @@ getAcpiBat bat = do
     let sysFsPath = "/sys/class/power_supply/" ++ show bat ++ "/"
     energyNow  <- EnergyNow  . read       . trim <$> readFile (sysFsPath ++ show EnergyNowAttr)
     energyFull <- EnergyFull . read       . trim <$> readFile (sysFsPath ++ show EnergyFullAttr)
-    status     <-              toStatus   . trim <$> readFile (sysFsPath ++ show StatusAttr)
+    status     <- toChargeStatus          . trim <$> readFile (sysFsPath ++ show StatusAttr)
     power      <- PowerNow   . read       . trim <$> readFile (sysFsPath ++ show PowerNowAttr)
-    let energyPercent = toRatio energyNow energyFull
+    let energyPercent = toEnergyPercent energyNow energyFull
     let timeRemaining = TimeRemaining
                       . secondsToDiffTime
                       . (* 3600)
@@ -106,18 +104,26 @@ getAcpiBat bat = do
 
     return $ BatteryStatus bat energyPercent status timeRemaining
 
-toStatus :: String -> ChargeStatus
-toStatus str =
+toChargeStatus :: String -> ChargeStatus
+toChargeStatus str =
   case str of
       "Charging"    -> Charging
       "Discharging" -> Discharging
       _             -> Full
 
-toRatio :: EnergyNow -> EnergyFull -> EnergyPercent
-toRatio (EnergyNow now) (EnergyFull full) = EnergyPercent $ now % full
+toEnergyPercent :: EnergyNow -> EnergyFull -> EnergyPercent
+toEnergyPercent (EnergyNow now) (EnergyFull full) = EnergyPercent $ now % full
 
-calcPercent :: EnergyPercent -> Integer
-calcPercent = round @Double . (* 100) . realToFrac . getEnergyPercent
+fromEnergyPercent :: EnergyPercent -> Integer
+fromEnergyPercent = round @Double . (* 100) . realToFrac . getEnergyPercent
+
+iconForBattery :: EnergyPercent -> FontAwesome
+iconForBattery (EnergyPercent rat)
+    | rat <= 1 % 8 = FaBatteryEmpty
+    | rat <= 1 % 4 = FaBatteryQuarter
+    | rat <= 1 % 2 = FaBatteryHalf
+    | rat <= 3 % 4 = FaBatteryThreeQuarters
+    | otherwise = FaBatteryFull
 
 printStatus :: AcStatus -> BatteryStatus -> BatteryStatus -> IO ()
 printStatus ac bat0@(BatteryStatus _ _ chargeStatus _) bat1@(BatteryStatus _ _ chargeStatus' _)
