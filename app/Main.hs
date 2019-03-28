@@ -140,9 +140,6 @@ printStatus ac bat0@(BatteryStatus _ _ chargeStatus _) bat1@(BatteryStatus _ _ c
     | chargeStatus' /= Full = print bat1
     | otherwise             = print ac
 
-illegalList :: [Int]
-illegalList = [1]
-
 main :: IO ()
 main = do
     ac   <- getAcpiAc
