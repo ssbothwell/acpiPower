@@ -93,10 +93,10 @@ getAcpiAc = do
 getAcpiBat :: Battery -> IO BatteryStatus
 getAcpiBat bat = do
     let sysFsPath = "/sys/class/power_supply/" ++ show bat ++ "/"
-    energyNow  <- EnergyNow  . read       . trim <$> readFile (sysFsPath ++ show EnergyNowAttr)
-    energyFull <- EnergyFull . read       . trim <$> readFile (sysFsPath ++ show EnergyFullAttr)
-    status     <- toChargeStatus          . trim <$> readFile (sysFsPath ++ show StatusAttr)
-    power      <- PowerNow   . read       . trim <$> readFile (sysFsPath ++ show PowerNowAttr)
+    energyNow  <- EnergyNow  . read . trim <$> readFile (sysFsPath ++ show EnergyNowAttr)
+    energyFull <- EnergyFull . read . trim <$> readFile (sysFsPath ++ show EnergyFullAttr)
+    status     <- toChargeStatus    . trim <$> readFile (sysFsPath ++ show StatusAttr)
+    power      <- PowerNow   . read . trim <$> readFile (sysFsPath ++ show PowerNowAttr)
     let energyPercent   = toEnergyPercent energyNow energyFull
     let energyRemaining = toEnergyRemaining energyNow energyFull
     let timeRemaining   = toTimeRemaining energyNow energyRemaining power
@@ -139,6 +139,9 @@ printStatus ac bat0@(BatteryStatus _ _ chargeStatus _) bat1@(BatteryStatus _ _ c
     | chargeStatus  /= Full = print bat0
     | chargeStatus' /= Full = print bat1
     | otherwise             = print ac
+
+illegalList :: [Int]
+illegalList = [1]
 
 main :: IO ()
 main = do
