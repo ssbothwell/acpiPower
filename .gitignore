@@ -1,5 +1,4 @@
 .stack-work/
-acpiPower.cabal
 *~
 /.envrc
 /dist-newstyle/

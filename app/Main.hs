@@ -43,7 +43,7 @@ instance Show Attr where
 
 instance Show EnergyPercent where
     showsPrec _ energy =
-        let icon    = showString . pure . fontAwesomeChar . iconForBattery $ energy
+        let icon    = showString $ "<fn=1>" <> (pure . fontAwesomeChar . iconForBattery $ energy) <> "</fn>"
             percent = showString (show $ fromEnergyPercent energy) . showString "%"
             space   = showString " "
         in icon . space . percent
