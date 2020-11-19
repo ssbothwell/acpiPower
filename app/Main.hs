@@ -53,7 +53,7 @@ instance Show TimeRemaining where
 
 instance Show AcStatus where
     showsPrec _ Disconnected = showString "AC"
-    showsPrec _ Connected    = showString (pure $ fontAwesomeChar FaPlug) . showString " AC"
+    showsPrec _ Connected    = showString $ "<fn=1>" <> (pure $ fontAwesomeChar FaPlug) <> "</fn> AC"
 
 instance Show BatteryStatus where
     showsPrec _ (BatteryStatus bat energy status timeRemaining) =
